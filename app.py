@@ -2,6 +2,7 @@ import os
 import json
 import requests
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 from langchain import PromptTemplate, LLMChain
 from langchain.llms import OpenAI
@@ -19,6 +20,7 @@ llm = OpenAI(
         )
 
 app = Flask(__name__)
+CORS(app)
 
 def get_graphql_schema(endpoint: str) -> str:
     """Retrieve the full GraphQL schema using an introspection query."""
