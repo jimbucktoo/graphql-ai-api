@@ -1,6 +1,13 @@
 # graphql-ai-api
 
-GraphQL-AI is an AI-powered GraphQL query generator using natural language processing.
+GraphQLAI converts plain English requests into precise, ready-to-use GraphQL queries, simplifying and speeding up data fetching.
+
+## Links
+
+- [GraphQLAI Front-End](https://graphql-ai.surge.sh/) - GraphQLAI Front-End Application
+- [GraphQLAI Back-End](https://graphql-ai-api.onrender.com) - GraphQLAI Back-End Server
+- [GraphQLAI Repository](https://github.com/jimbucktoo/graphql-ai/) - GraphQLAI Github Repository
+- [GraphQLAI API Repository](https://github.com/jimbucktoo/graphql-ai-api/) - GraphQLAI API Github Repository
 
 ## Technologies
 
