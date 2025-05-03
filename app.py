@@ -23,12 +23,12 @@ CORS(app)
 
 # Prompt template for generating GraphQL queries
 prompt_template = PromptTemplate(
-        input_variables=["schema_summary", "question"],
+        input_variables=["schema_summary", "prompt"],
         template=(
             "Below is a summary of the GraphQL schema for the provided endpoint:\n"
             "{schema_summary}\n\n"
-            "Based on the schema summary, write a valid GraphQL query for the following question:\n"
-            "{question}\n\n"
+            "Based on the schema summary, write a valid GraphQL query for the following prompt:\n"
+            "{prompt}\n\n"
             "Return only the GraphQL query."
             )
         )
@@ -84,10 +84,10 @@ def summarize_schema(full_schema: str) -> str:
     return "\n".join(lines)
 
 
-def generate_graphql_query(question: str, schema_summary: str) -> str:
-    """Generate a GraphQL query from a natural language question using the LLM."""
+def generate_graphql_query(prompt: str, schema_summary: str) -> str:
+    """Generate a GraphQL query from a natural language prompt using the LLM."""
     chain = LLMChain(llm=llm, prompt=prompt_template)
-    return chain.run(schema_summary=schema_summary, question=question).strip()
+    return chain.run(schema_summary=schema_summary, prompt=prompt).strip()
 
 
 def execute_graphql_query(query: str, endpoint: str) -> dict:
@@ -101,16 +101,16 @@ def execute_graphql_query(query: str, endpoint: str) -> dict:
 def query_endpoint():
     """
     Accepts JSON with:
-      - question: natural language question
+      - prompt: natural language prompt
       - endpoint: GraphQL endpoint URL
 
     Generates and executes a query, returning both the GraphQL query and its results.
     """
     data = request.get_json() or {}
-    question = data.get("question")
+    prompt = data.get("prompt")
     endpoint = data.get("endpoint")
-    if not question or not endpoint:
-        return jsonify({"error": "Both 'question' and 'endpoint' fields are required"}), 400
+    if not prompt or not endpoint:
+        return jsonify({"error": "Both 'prompt' and 'endpoint' fields are required"}), 400
 
     try:
         # Fetch and summarize schema for this endpoint
@@ -118,11 +118,11 @@ def query_endpoint():
         schema_summary = summarize_schema(full_schema)
 
         # Generate and execute
-        gql_query = generate_graphql_query(question, schema_summary)
+        gql_query = generate_graphql_query(prompt, schema_summary)
         result = execute_graphql_query(gql_query, endpoint)
 
         return jsonify({
-            "question": question,
+            "prompt": prompt,
             "endpoint": endpoint,
             "graphql_query": gql_query,
             "result": result
