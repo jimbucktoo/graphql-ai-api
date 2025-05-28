@@ -8,3 +8,4 @@ requests>=2.31.0
 pandas>=1.5.3
 sqlalchemy>=2.0.19
 gunicorn==21.2.0
+graphql-core==3.2.6
