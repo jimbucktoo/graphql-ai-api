@@ -25,14 +25,13 @@ CORS(app)
 prompt_template = PromptTemplate(
         input_variables=["schema_summary", "prompt"],
         template=(
-            "Below is a summary of the GraphQL schema for the provided endpoint:\n"
-            "{schema_summary}\n\n"
-            "Based on the schema summary, write a valid GraphQL query for the following prompt:\n"
-            "{prompt}\n\n"
-            "Return only the GraphQL query."
+            "Schema summary:\n{schema_summary}\n\n"
+            "Your task is to convert the user's natural language request into a valid GraphQL query.\n"
+            "Include required arguments, return useful fields, and follow correct syntax.\n\n"
+            "User request: {prompt}\n\n"
+            "GraphQL query:"
             )
         )
-
 
 def get_graphql_schema(endpoint: str) -> str:
     """Retrieve the full GraphQL schema using an introspection query."""
@@ -52,11 +51,19 @@ def get_graphql_schema(endpoint: str) -> str:
               type {
                 name
                 kind
+                ofType {
+                  name
+                  kind
+                }
               }
             }
             type {
               name
               kind
+              ofType {
+                name
+                kind
+              }
             }
           }
         }
@@ -67,35 +74,55 @@ def get_graphql_schema(endpoint: str) -> str:
     resp.raise_for_status()
     return resp.text
 
+def get_type_name(type_obj):
+    """Helper to extract the actual type name (unwraps nested ofType)."""
+    while type_obj and not type_obj.get("name"):
+        type_obj = type_obj.get("ofType", {})
+    return type_obj.get("name") or "Unknown"
 
 def summarize_schema(full_schema: str) -> str:
     """
-    Summarize the GraphQL schema to only include the names of object types and a few fields.
-    This helps in reducing the token size of the prompt.
+    Summarize the GraphQL schema to include object types, field names, types, and arguments.
     """
     data = json.loads(full_schema)
     types = data.get("data", {}).get("__schema", {}).get("types", [])
     lines = []
     for t in types:
         if t.get("kind") == "OBJECT" and t.get("name") and not t["name"].startswith("__"):
-            fields = t.get("fields", [])[:3]
-            field_names = [f.get("name") for f in fields]
-            lines.append(f"{t['name']}: {', '.join(field_names)}")
-    return "\n".join(lines)
-
+            fields = t.get("fields", [])[:5]  # Include first 5 fields for brevity
+            field_lines = []
+            for f in fields:
+                field_name = f.get("name")
+                field_type = get_type_name(f.get("type", {}))
+                args = f.get("args", [])
+                if args:
+                    args_str = ", ".join(
+                            f"{arg['name']}: {get_type_name(arg['type'])}"
+                            for arg in args
+                            )
+                    field_lines.append(f"{field_name}({args_str}): {field_type}")
+                else:
+                    field_lines.append(f"{field_name}: {field_type}")
+            if field_lines:
+                lines.append(f"{t['name']} {{\n  " + "\n  ".join(field_lines) + "\n}}")
+    return "\n\n".join(lines)
 
 def generate_graphql_query(prompt: str, schema_summary: str) -> str:
     """Generate a GraphQL query from a natural language prompt using the LLM."""
     chain = LLMChain(llm=llm, prompt=prompt_template)
     return chain.run(schema_summary=schema_summary, prompt=prompt).strip()
 
-
 def execute_graphql_query(query: str, endpoint: str) -> dict:
     """Execute the GraphQL query against the given endpoint and return the JSON response."""
+    print("Generated GraphQL Query:\n", query)  # Debug logging
     resp = requests.post(endpoint, json={"query": query})
-    resp.raise_for_status()
-    return resp.json()
-
+    try:
+        resp.raise_for_status()
+        return resp.json()
+    except requests.HTTPError as e:
+        print("GraphQL Error Response:\n", resp.text)  # Debug logging
+        # Include the raw GraphQL error response in the returned error
+        raise Exception(f"GraphQL Error:\n{resp.text}")
 
 @app.route("/query", methods=["POST"])
 def query_endpoint():
@@ -128,8 +155,9 @@ def query_endpoint():
             "result": result
             })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({
+            "error": str(e)
+            }), 500
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
