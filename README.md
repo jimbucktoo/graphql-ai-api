@@ -8,6 +8,7 @@ GraphQLAI converts plain English requests into precise, ready-to-use GraphQL que
 - [GraphQLAI Back-End](https://graphql-ai-api.onrender.com) - GraphQLAI Back-End Server
 - [GraphQLAI Repository](https://github.com/jimbucktoo/graphql-ai/) - GraphQLAI Github Repository
 - [GraphQLAI API Repository](https://github.com/jimbucktoo/graphql-ai-api/) - GraphQLAI API Github Repository
+- [GraphQLAI Slack Repository](https://github.com/jimbucktoo/graphql-ai-slack/) — GraphQLAI Slack Github Repository
 
 ## Getting Started
 
@@ -50,10 +51,9 @@ python app.py
 ```
 POST http://localhost:10000/query
 Content-Type: application/json
-
 {
     "prompt": "Get the titles of all movies",
-    "endpoint": "https://moviecrud.onrender.com/graphql"
+    "endpoint": "https://<your-graphql-endpoint>"
 }
 ```
 
