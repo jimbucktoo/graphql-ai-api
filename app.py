@@ -4,8 +4,9 @@ import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from langchain import PromptTemplate, LLMChain
-from langchain.llms import OpenAI
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_openai import OpenAI
 from graphql import build_client_schema, parse, validate, get_introspection_query
 
 # Load environment variables
@@ -71,8 +72,8 @@ def summarize_schema(full_schema: str) -> str:
     return "\n\n".join(lines)
 
 def generate_graphql_query(prompt: str, schema_summary: str) -> str:
-    chain = LLMChain(llm=llm, prompt=prompt_template)
-    return chain.run(schema_summary=schema_summary, prompt=prompt).strip()
+    chain = prompt_template | llm | StrOutputParser()
+    return chain.invoke({"schema_summary": schema_summary, "prompt": prompt}).strip()
 
 def generate_query_with_feedback(prompt: str, schema_summary: str, error_msg: str) -> str:
     retry_prompt = (
@@ -82,8 +83,8 @@ def generate_query_with_feedback(prompt: str, schema_summary: str, error_msg: st
             f"Using this schema:\n{schema_summary}\n\n"
             "Please generate a corrected query."
             )
-    chain = LLMChain(llm=llm, prompt=prompt_template)
-    return chain.run(schema_summary=schema_summary, prompt=retry_prompt).strip()
+    chain = prompt_template | llm | StrOutputParser()
+    return chain.invoke({"schema_summary": schema_summary, "prompt": retry_prompt}).strip()
 
 def validate_query_against_schema(query: str, schema_json: dict) -> list:
     schema = build_client_schema(schema_json["data"])
