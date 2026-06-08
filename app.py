@@ -107,6 +107,10 @@ def execute_graphql_query(query: str, endpoint: str) -> dict:
         raise Exception(f"HTTP Error:\n{resp.text}")
 
 # Flask route
+@app.route("/health")
+def health():
+    return {"status": "ok"}, 200
+
 @app.route("/query", methods=["POST"])
 def query_endpoint():
     data = request.get_json() or {}
